@@ -1,56 +1,87 @@
-from airflow.decorators import dag, task
-from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.providers.postgres.operators.postgres import PostgresOperator
-import datetime
-import os
-import pendulum
-import requests
+from airflow import DAG
 
+# from airflow.providers.snowflake.hooks.snowflake import SnowflakeHook
+from airflow.providers.snowflake.operators.snowflake import SnowflakeOperator
+from airflow.operators.python_operator import PythonOperator
+import airflow
+import logging
 
-@dag(
-    dag_id="process-employees",
-    schedule_interval="0 0 * * *",
-    start_date=pendulum.datetime(2021, 1, 1, tz="UTC"),
-    catchup=False,
-    dagrun_timeout=datetime.timedelta(minutes=60),
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+args = {
+    "owner": "Airflow",
+    "start_date": airflow.utils.dates.days_ago(2),
+}
+
+dag = DAG(
+    dag_id="snowflake_automation",
+    default_args=args,
+    schedule_interval=None,
 )
-def ProcessEmployees():
-    create_employees_table = PostgresOperator(
-        task_id="create_employees_table",
-        postgres_conn_id="tutorial_pg_conn",
-        sql="""
-            CREATE TABLE IF NOT EXISTS employees (
-                "Serial Number" NUMERIC PRIMARY KEY,
-                "Company Name" TEXT,
-                "Employee Markme" TEXT,
-                "Description" TEXT,
-                "Leave" INTEGER
-            );""",
+
+
+# def get_row_count(**context):
+#     dwh_hook = SnowflakeHook(
+#         snowflake_conn_id="snowflake_conn",
+#     )
+#     result = dwh_hook.get_first(
+#         "select count(*) from public.users",
+#     )
+#     logging.info(
+#         "Number of rows in `public.users`  - %s",
+#         result[0],
+#     )
+
+
+with dag:
+    create_insert = SnowflakeOperator(
+        task_id="snowfalke_create",
+        sql="sql/create_and_upload.sql",
+        snowflake_conn_id="snowflake_conn",
     )
 
-    @task
-    def get_data():
-        data_path = "/opt/airflow/dags/files/employees.csv"
-        os.makedirs(os.path.dirname(data_path), exist_ok=True)
+    # get_count = PythonOperator(
+    #     task_id="get_count",
+    #     python_callable=get_row_count,
+    # )
 
-        url = "https://raw.githubusercontent.com/apache/airflow/main/docs/apache-airflow/tutorial/pipeline_example.csv"
+# create_insert >> get_count
 
-        response = requests.request("GET", url)
-
-        with open(data_path, "w") as file:
-            file.write(response.text)
-
-        postgres_hook = PostgresHook(postgres_conn_id="tutorial_pg_conn")
-        conn = postgres_hook.get_conn()
-        cur = conn.cursor()
-        with open(data_path, "r") as file:
-            cur.copy_expert(
-                "COPY employees_temp FROM STDIN WITH CSV HEADER DELIMITER AS ',' QUOTE '\"'",
-                file,
-            )
-        conn.commit()
-
-    [create_employees_table] >> get_data()
+create_insert
 
 
-dag = ProcessEmployees()
+# @dag(
+#     dag_id="snowflake-automation",
+#     schedule_interval="0 0 * * *",
+#     start_date=pendulum.datetime(2022, 1, 1, tz="UTC"),
+#     catchup=False,
+#     dagrun_timeout=datetime.timedelta(minutes=60),
+# )
+# def ProcessData():
+#     create_tables = PostgresOperator(
+#         task_id="create_tables",
+#         postgres_conn_id="snowflake_conn",
+#         sql="sql/create_and_upload.sql",
+#     )
+
+#     @task
+#     def get_data(csv_file):
+#         data_path = f"/opt/airflow/dags/data/{csv_file}"
+
+#         postgres_hook = PostgresHook(
+#             postgres_conn_id="snowflake_conn",
+#         )
+#         conn = postgres_hook.get_conn()
+#         cur = conn.cursor()
+#         with open(data_path, "r") as file:
+#             cur.copy_expert(
+#                 "COPY employees_temp FROM STDIN WITH CSV HEADER DELIMITER AS ',' QUOTE '\"'",
+#                 file,
+#             )
+#         conn.commit()
+
+#     create_tables >> get_data("users.csv")
+
+
+# dag = ProcessData()
