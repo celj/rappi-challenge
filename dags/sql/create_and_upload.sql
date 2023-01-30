@@ -1,79 +1,71 @@
-create or replace dummy_db.public.cards (
-        user integer,
-        card_index integer,
+create or replace table dummy_db.public.cards_temp (
+        user text,
+        card_index text,
         card_brand text,
         card_type text,
         card_number text,
         expires text,
-        cvv integer,
-        has_chip boolean,
-        card_issued integer,
+        cvv text,
+        has_chip text,
+        cards_issued text,
         credit_limit text,
         acct_open_date text,
-        year_pin_last_changed integer,
-        card_on_dark_web boolean
+        year_pin_last_changed text,
+        card_on_dark_web text
     );
-alter table dummy_db.public.cards
-add primary key (user, card_number);
-create stage card_temp file_format = (type = csv);
-put 'file:///opt/airflow/dags/data/cards.csv' @card_temp auto_compress = true;
-copy into dummy_db.public.cards
-from @card_temp file_format = (type = csv) on_error = 'skip_file';
-create or replace dummy_db.public.transactions (
-        user integer,
-        card integer,
-        year integer,
-        month integer,
-        day integer,
-        time time,
+create or replace stage card_temp file_format = (type = csv);
+put file:///opt/airflow/dags/data/cards.csv @card_temp auto_compress = true;
+copy into dummy_db.public.cards_temp
+from @card_temp file_format = (
+        type = csv skip_header = 1 field_optionally_enclosed_by = '"'
+    );
+create or replace table dummy_db.public.transactions_temp (
+        user text,
+        card_index text,
+        year text,
+        month text,
+        day text,
+        time text,
         amount text,
         use_chip text,
         card_number text,
         merchant_city text,
         merchant_state text,
-        zip integer,
-        mcc integer,
+        zip text,
+        mcc text,
         errors text,
-        is_fraud boolean
+        is_fraud text
     );
-alter table dummy_db.public.transactions
-add primary key (
-        user,
-        card,
-        year,
-        month,
-        day,
-        time,
-        amount
+create or replace stage transaction_temp file_format = (type = csv);
+put file:///opt/airflow/dags/data/transactions.csv @transaction_temp auto_compress = true;
+copy into dummy_db.public.transactions_temp
+from @transaction_temp file_format = (
+        type = csv skip_header = 1 field_optionally_enclosed_by = '"'
     );
-create stage transaction_temp file_format = (type = csv);
-put 'file:///opt/airflow/dags/data/transactions.csv' @transaction_temp auto_compress = true;
-copy into dummy_db.public.transactions
-from @transaction_temp file_format = (type = csv) on_error = 'skip_file';
-create or replace dummy_db.public.users(
-        user integer,
+create or replace table dummy_db.public.users_temp (
+        user text,
         person text,
-        current_age integer,
-        retirement_age integer,
-        birth_year integer,
-        birth_month integer,
+        current_age text,
+        retirement_age text,
+        birth_year text,
+        birth_month text,
         gender text,
         address text,
-        apartment integer,
+        apartment text,
         city text,
         state text,
-        zip integer,
-        latitude numeric,
-        longitude numeric,
-        zip_income_per_capita numeric,
-        person_yearly_income numeric,
-        total_debt numeric,
-        fico_score integer,
-        num_credit_cards integer
+        zip text,
+        latitude text,
+        longitude text,
+        zip_income_per_capita text,
+        person_yearly_income text,
+        total_debt text,
+        fico_score text,
+        num_credit_cards text
     );
-alter table dummy_db.public.users
-add primary key (user);
-create stage user_temp file_format = (type = csv);
-put 'file:///opt/airflow/dags/data/users.csv' @user_temp auto_compress = true;
-copy into dummy_db.public.users
-from @user_temp file_format = (type = csv) on_error = 'skip_file';
+create or replace stage user_temp file_format = (type = csv);
+put file:///opt/airflow/dags/data/users.csv @user_temp auto_compress = true;
+copy into dummy_db.public.users_temp
+from @user_temp file_format = (
+        type = csv skip_header = 1 field_optionally_enclosed_by = '"'
+    );
