@@ -7,7 +7,7 @@ First, let's go to the Snowflake console and run the script `snowflake-setup.sql
 For replication, you need to start the containers with
 
 ```sh
-docker-compose up --build && docker-compose up
+docker compose up --build && docker compose up
 ```
 
 All defaults were kept in this project, so airflow will be hosted at [`http://0.0.0.0:8080`](http://0.0.0.0:8080), and login keys are:
@@ -36,5 +36,5 @@ Finally, go back to `DAGs` tab, and trigger the `snowflake_automation`[^1] DAG.
 To kill airflow and the containers, press `^C` and, then, run
 
 ```sh
-docker-compose down --volumes --rmi all
+docker compose down --volumes --rmi all
 ```
